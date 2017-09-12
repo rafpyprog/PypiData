@@ -2,7 +2,6 @@ import copy
 import os
 import xml.etree.cElementTree as ET
 
-from bs4 import BeautifulSoup
 import requests
 from requests.exceptions import HTTPError
 import ujson
@@ -59,77 +58,39 @@ class Package():
             setattr(self, field, field_value)
         return info_data
 
+    def parse_version_release(self, version):
+        ''' Biggest release file '''
+        FIELDS = ('filename', 'size', 'upload_time')
+        release = self.releases.pop(version, None)
 
-
-
-
-def parse_package_info(package_data):
-    data = {}
-    info = package_data['info']
-
-    data['name'] = info.pop('name', None)
-    data['license'] = info.pop('license', None)
-    data['summary'] = info.pop('summary', None)
-    data['home_page'] = info.pop('home_page', None)
-    data['author'] = info.pop('author', None)
-    data['author_email'] = info.pop('author_email', None)
-    data['maintainer'] = info.pop('maintainer', None)
-    data['keywords'] = info.pop('keywords', None)
-    data['platform'] = info.pop('platform', None)
-    data['version'] = info.pop('version', None)
-
-    release = package_data['releases'][data['version']]
-    if release != []:
-        for field in ('filename', 'size', 'upload_time'):
-            data[field] = release.pop(field, None)
-    else:
-
-
-    return data
-
-
-
-def parse_package_data(package_data):
-    data = package_data.deepcopy()
-    INFO_DATA = ('name', 'license', 'summary', 'home_page', 'author',
-                 'author_email', 'maintainer', 'keywords',
-                 'platform', 'version')
-
-    releases = data.pop('releases', None)
-    urls = data.pop('urls', None)
-
-    wanted = {}
-    data_fields = list(data['info'].keys())
-    for field in data_fields:
-        if field in INFO_DATA:
-            wanted[field] = data['info'].pop(field, None)
-
-    RELEASE_DATA = ('filename', 'size', 'upload_time')
-    LAST_RELEASE = releases[wanted['version']]
-    for release_file in LAST_RELEASE:
-        if release_file['filename'].endswith('tar.gz'):
-            for field in RELEASE_DATA:
-                wanted[field] = release_file.pop(field, None)
-            break
-    else:  # Some packages dont have tar.gz, Try to get the last file from list
-        if LAST_RELEASE == []:
-            for field in RELEASE_DATA:
-                wanted[field] = None
+        if release != []:
+            max_size = max(map(lambda x: x['size'], release))
+            release_data = next(filter(lambda x: x['size'] == max_file, release))
+            DESIRED_FIELDS = lambda x: x[0] in FIELDS
+            return dict(filter(DESIRED_FIELDS, r.items()))
         else:
-            LAST_FILE = -1
-            release_file = LAST_RELEASE[LAST_FILE]
-            for field in RELEASE_DATA:
-                wanted[field] = release_file.pop(field, None)
-
-    # TO DO CLASSIFIERS
-
-    return wanted
-
+            return None
 
 
 p = Pypi()
-data = p.get_package_data("imagesoup")
+data = p.get_package_data("requests")
 imagesoup = Package(data)
+v = imagesoup.version
+r = imagesoup.parse_version_release(v)
+r
+
+
+for i in filter(lambda x: x in ('size', 'upload_time'), r):
+    print(i)
+
+list(filter(lambda x: [max(i['size']) for i in x], r))
+
+
+max_file = max(map(lambda x: x['size'], r))
+
+
+
+
 imagesoup.version
 data['info']['version']
 data['info']['name']

@@ -1,4 +1,4 @@
-bigquery
+google-cloud-bigquery
 requests
 tinydb
 ujson
