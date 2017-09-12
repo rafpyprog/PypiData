@@ -1,10 +1,11 @@
-import json
+import copy
 import os
 import xml.etree.cElementTree as ET
 
 from bs4 import BeautifulSoup
 import requests
 from requests.exceptions import HTTPError
+import ujson
 
 
 class Pypi():
@@ -25,11 +26,71 @@ class Pypi():
         except HTTPError as e:
             print(str(e))
             return None
-        data = json.loads(response.content)
+        data = ujson.loads(response.content)
         return data
 
 
-def parse_package_data(data):
+class Package():
+    def __init__(self, data):
+        self.data = copy.deepcopy(data)
+        self.parse_info()
+
+    @property
+    def info(self):
+        return self.data['info']
+
+    @property
+    def releases(self):
+        return self.data['releases']
+
+    @property
+    def urls(self):
+        return self.data['urls']
+
+    def parse_info(self):
+        FIELDS = ('name', 'license', 'summary', 'home_page', 'author',
+                  'author_email', 'maintainer', 'keywords',
+                  'platform', 'version')
+        info_data = {}
+
+        for field in FIELDS:
+            field_value = self.info.pop(field, None)
+            info_data[field] = field_value
+            setattr(self, field, field_value)
+        return info_data
+
+
+
+
+
+def parse_package_info(package_data):
+    data = {}
+    info = package_data['info']
+
+    data['name'] = info.pop('name', None)
+    data['license'] = info.pop('license', None)
+    data['summary'] = info.pop('summary', None)
+    data['home_page'] = info.pop('home_page', None)
+    data['author'] = info.pop('author', None)
+    data['author_email'] = info.pop('author_email', None)
+    data['maintainer'] = info.pop('maintainer', None)
+    data['keywords'] = info.pop('keywords', None)
+    data['platform'] = info.pop('platform', None)
+    data['version'] = info.pop('version', None)
+
+    release = package_data['releases'][data['version']]
+    if release != []:
+        for field in ('filename', 'size', 'upload_time'):
+            data[field] = release.pop(field, None)
+    else:
+
+
+    return data
+
+
+
+def parse_package_data(package_data):
+    data = package_data.deepcopy()
     INFO_DATA = ('name', 'license', 'summary', 'home_page', 'author',
                  'author_email', 'maintainer', 'keywords',
                  'platform', 'version')
@@ -63,3 +124,12 @@ def parse_package_data(data):
     # TO DO CLASSIFIERS
 
     return wanted
+
+
+
+p = Pypi()
+data = p.get_package_data("imagesoup")
+imagesoup = Package(data)
+imagesoup.version
+data['info']['version']
+data['info']['name']
