@@ -16,10 +16,10 @@ def login_client(project_id, service_account, json_key_file):
     return client
 
 
-def last_n_days(n):
+def last_n_days(n, packages):
     actual_date = date.today().strftime('%Y-%m-%d')
     past_date = (date.today() - timedelta(days=n)).strftime('%Y-%m-%d')
-    packages = python_packages()
+    #packages = python_packages()
 
     sql_query = f'''SELECT
                        file.project,
