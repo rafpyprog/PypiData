@@ -1,34 +1,35 @@
 import json
 import os
+import xml.etree.cElementTree as ET
 
 from bs4 import BeautifulSoup
 import requests
 from requests.exceptions import HTTPError
-from tinydb import TinyDB, Query
 
 
+class Pypi():
+    def __init__(self):
+        self.index = 'https://pypi.python.org/simple/'
+        self.jsonAPI = 'https://pypi.python.org/pypi/{}/json'
 
-def get_all_packages():
-    pypi_index = 'https://pypi.python.org/simple/'
-    response = requests.get(pypi_index)
-    soup = BeautifulSoup(response.content, 'html.parser')
-    names = [link.text for link in soup.findAll('a')]
-    return names
+    def find_all_packages(self):
+        HTML = requests.get('https://pypi.python.org/simple/').text
+        body = ET.fromstring(HTML).find('body')
+        packages = [link.text for link in body.findall('a')]
+        return packages
+
+    def get_package_data(self, package_name):
+        response = requests.get(self.jsonAPI.format(package_name))
+        try:
+            response.raise_for_status()
+        except HTTPError as e:
+            print(str(e))
+            return None
+        data = json.loads(response.content)
+        return data
 
 
-def get_package_data(package_name):
-    pypi_API = f'https://pypi.python.org/pypi/{package_name}/json'
-    response = requests.get(pypi_API)
-    try:
-        response.raise_for_status()
-    except HTTPError as e:
-        print(str(e))
-        return None
-    data = json.loads(response.content)
-    return data
-
-
-def filter_package_data(data):
+def parse_package_data(data):
     INFO_DATA = ('name', 'license', 'summary', 'home_page', 'author',
                  'author_email', 'maintainer', 'keywords',
                  'platform', 'version')
@@ -59,22 +60,6 @@ def filter_package_data(data):
             for field in RELEASE_DATA:
                 wanted[field] = release_file.pop(field, None)
 
-    #TO DO CLASSIFIERS
+    # TO DO CLASSIFIERS
 
     return wanted
-
-
-pypi_packages = get_all_packages()
-print(f'Found {len(pypi_packages)} packages.')
-
-test = pypi_packages[0:1000]
-
-os.remove('packagedata.json')
-db = TinyDB('packagedata.json')
-
-for n, package in enumerate(test):
-    print(n + 1, package)
-    data = get_package_data(package)
-    if data:
-        package_data = filter_package_data(data)
-        db.insert(package_data)
